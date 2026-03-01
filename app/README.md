@@ -1,16 +1,44 @@
-# React + Vite
+# Budget Tracker (React SPA) — MVP
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A simple budget tracker single-page application (SPA) built with React.  
+Users can add income/expense transactions, view totals by currency, change base currency preferences, and compare exchange rates using a public API.
 
-Currently, two official plugins are available:
+## Purpose / Problem
+Tracking spending and income gets messy fast when you have multiple transactions and currencies. This MVP provides a clean workflow to record transactions and view summarized totals, while also showing live exchange-rate comparisons for the user’s selected base currency.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+## Technologies Used
+- React (Vite)
+- React Router (multi-route SPA)
+- React Context API (global state)
+- JavaScript
+- CSS (mobile-first responsive styling)
+- Vitest + React Testing Library (basic unit tests)
+- Public REST API: Frankfurter (exchange rates)
 
-## React Compiler
+## Features (MVP)
+- Add transactions (income/expense) with amount + currency
+- Expense categories (categories hidden for income)
+- Dashboard totals grouped by currency
+- Profile: change base currency (default for new transactions)
+- Insights: compare exchange rates (base currency → selected currency)
+- Local persistence using `localStorage` (transactions + settings)
+- 4+ routes + 404 page
+- Basic tests for routes and transaction add flow
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## Routes
+- `/` — Dashboard
+- `/transactions` — Add + view transactions
+- `/insights` — Exchange-rate comparison
+- `/profile` — Base currency settings
+- `*` — Not Found
 
-## Expanding the ESLint configuration
+## API Integration
+**Frankfurter API (Public REST)**
+- Base URL: `https://api.frankfurter.dev/v1`
+- Endpoint used: `/latest?base=USD` (base currency changes dynamically)
+- Used on the Insights page to display live conversion rates.
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+## Getting Started (Local Setup)
+1) Install dependencies:
+```bash
+npm install
