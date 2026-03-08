@@ -1,62 +1,51 @@
 import { useEffect, useMemo, useState } from "react";
+import { Helmet } from "react-helmet-async";
 import { useBudget, currencyOptions } from "../contexts/BudgetContext.jsx";
-
-const API_BASE = "https://api.frankfurter.dev/v1";
-
-async function fetchLatestRates(base) {
-  const url = `${API_BASE}/latest?base=${encodeURIComponent(base)}`;
-  const res = await fetch(url);
-
-  if (!res.ok) {
-    const text = await res.text().catch(() => "");
-    throw new Error(`Frankfurter API error ${res.status}: ${text || res.statusText}`);
-  }
-
-  return res.json();
-}
+import { fetchLatestRates } from "../utils/frankfurter.js";
 
 export default function Insights() {
   const { settings } = useBudget();
   const base = settings.baseCurrency;
 
   const defaultTarget = useMemo(() => {
-    // pick something different than base
     const fallback = currencyOptions.find((c) => c !== base);
     return fallback || "EUR";
   }, [base]);
 
   const [target, setTarget] = useState(defaultTarget);
-
   const [data, setData] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
 
-  // If base changes and target matches base, auto-pick a new target
   useEffect(() => {
-    if (target === base) setTarget(defaultTarget);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [base, defaultTarget]);
+    if (target === base) {
+      setTarget(defaultTarget);
+    }
+  }, [base, defaultTarget, target]);
 
   useEffect(() => {
     let alive = true;
 
-    setIsLoading(true);
-    setError("");
-    setData(null);
+    async function loadRates() {
+      try {
+        setIsLoading(true);
+        setError("");
+        setData(null);
 
-    fetchLatestRates(base)
-      .then((json) => {
+        const json = await fetchLatestRates(base);
+
         if (!alive) return;
         setData(json);
-      })
-      .catch((e) => {
+      } catch (e) {
         if (!alive) return;
         setError(e?.message || "API error");
-      })
-      .finally(() => {
+      } finally {
         if (!alive) return;
         setIsLoading(false);
-      });
+      }
+    }
+
+    loadRates();
 
     return () => {
       alive = false;
@@ -67,6 +56,10 @@ export default function Insights() {
 
   return (
     <section>
+      <Helmet>
+        <title>Insights | Budget Tracker</title>
+      </Helmet>
+
       <h2>Insights</h2>
       <p className="muted">
         Exchange rates (Frankfurter API) — base: <strong>{base}</strong>
@@ -98,7 +91,12 @@ export default function Insights() {
         </div>
       </div>
 
-      {isLoading && <p>Loading rates…</p>}
+      {isLoading && (
+        <div className="card">
+          <div className="skeleton" style={{ width: "40%", marginBottom: 10 }} />
+          <div className="skeleton" style={{ width: "60%" }} />
+        </div>
+      )}
 
       {error && (
         <div className="card">
@@ -109,7 +107,7 @@ export default function Insights() {
         </div>
       )}
 
-      {data && !error && (
+      {data && !error && !isLoading && (
         <div className="card">
           <div className="row space">
             <strong>Latest rate</strong>

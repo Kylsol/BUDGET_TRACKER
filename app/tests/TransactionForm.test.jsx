@@ -1,23 +1,29 @@
-import { test, expect } from "vitest";
+import { test, expect, beforeEach, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { MemoryRouter } from "react-router-dom";
-import Transactions from "../src/pages/Transactions.jsx";
 import { BudgetProvider } from "../src/contexts/BudgetContext.jsx";
+import TransactionForm from "../src/components/TransactionForm.jsx";
 
-test("adds a transaction and shows it in the list", async () => {
+beforeEach(() => {
+  sessionStorage.clear();
+  localStorage.clear();
+  vi.stubGlobal("crypto", {
+    randomUUID: () => "test-id-123"
+  });
+});
+
+test("adds an expense transaction", async () => {
   const user = userEvent.setup();
 
   render(
     <BudgetProvider>
-      <MemoryRouter>
-        <Transactions />
-      </MemoryRouter>
+      <TransactionForm />
     </BudgetProvider>
   );
 
-  await user.type(screen.getByLabelText(/amount/i), "10");
+  await user.type(screen.getByPlaceholderText(/25.50/i), "45");
+  await user.type(screen.getByPlaceholderText(/optional/i), "Groceries");
   await user.click(screen.getByRole("button", { name: /add/i }));
 
-  expect(screen.getByText(/10\.00/i)).toBeInTheDocument();
+  expect(localStorage.getItem("budget_tracker_v1")).toContain("Groceries");
 });
