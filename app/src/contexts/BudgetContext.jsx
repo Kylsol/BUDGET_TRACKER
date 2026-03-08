@@ -1,19 +1,25 @@
 import React, { createContext, useContext, useEffect, useMemo, useState } from "react";
+import { useAuth } from "./AuthContext.jsx";
 
 const BudgetContext = createContext(null);
 
 export const currencyOptions = ["USD", "ZAR", "EUR", "GBP", "JPY", "AUD", "CAD"];
 export const expenseCategories = ["Food", "Transport", "Rent", "Entertainment", "Other"];
 
-const STORAGE_KEY = "budget_tracker_v1";
+function getStorageKey(user) {
+  if (user?.email) {
+    return `budget_tracker_${user.email}`;
+  }
+  return "budget_tracker_guest";
+}
 
-function loadState() {
+function loadState(storageKey) {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
+    const raw = localStorage.getItem(storageKey);
     if (!raw) return null;
+
     const parsed = JSON.parse(raw);
 
-    // basic shape validation (avoid app crashes if storage is corrupted)
     if (!parsed || typeof parsed !== "object") return null;
 
     return {
@@ -28,24 +34,32 @@ function loadState() {
   }
 }
 
-function saveState(state) {
+function saveState(storageKey, state) {
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    localStorage.setItem(storageKey, JSON.stringify(state));
   } catch {
     // ignore quota / privacy mode errors
   }
 }
 
 export function BudgetProvider({ children }) {
-  const loaded = loadState();
+  const { user } = useAuth();
 
-  const [transactions, setTransactions] = useState(loaded?.transactions ?? []);
-  const [settings, setSettings] = useState(loaded?.settings ?? { baseCurrency: "USD" });
+  const storageKey = useMemo(() => getStorageKey(user), [user]);
 
-  // Persist whenever state changes
+  const [transactions, setTransactions] = useState([]);
+  const [settings, setSettings] = useState({ baseCurrency: "USD" });
+
   useEffect(() => {
-    saveState({ transactions, settings });
-  }, [transactions, settings]);
+    const loaded = loadState(storageKey);
+
+    setTransactions(loaded?.transactions ?? []);
+    setSettings(loaded?.settings ?? { baseCurrency: "USD" });
+  }, [storageKey]);
+
+  useEffect(() => {
+    saveState(storageKey, { transactions, settings });
+  }, [storageKey, transactions, settings]);
 
   function addTransaction(tx) {
     setTransactions((prev) => [{ ...tx, id: crypto.randomUUID() }, ...prev]);
