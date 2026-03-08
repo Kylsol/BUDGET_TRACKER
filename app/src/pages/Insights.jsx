@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Helmet } from "react-helmet-async";
 import { useBudget, currencyOptions } from "../contexts/BudgetContext.jsx";
-import { fetchLatestRates } from "../utils/frankfurter.js";
+import { fetchLatestRates } from "../services/frankfurter.js";
 
 export default function Insights() {
   const { settings } = useBudget();

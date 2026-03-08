@@ -1,9 +1,3 @@
-Below is a **complete README you can paste directly into your repo**. It is written based on the exact project structure and features you showed earlier.
-
-It also clearly documents **authentication, testing, API integration, deployment, and architecture**, which helps satisfy your assignment requirements and makes the repo look professional.
-
----
-
 # Budget Tracker (React SPA)
 
 A responsive **budget tracking single-page application (SPA)** built with **React, React Router, and Context API**.
@@ -361,7 +355,3 @@ Software Engineering / Graphic Design
 
 GitHub
 [https://github.com/Kylsol](https://github.com/Kylsol)
-
----
-
-If you want, I can also give you **a slightly shorter README that looks more like something used in industry projects**, which some professors prefer because it is easier to skim.
