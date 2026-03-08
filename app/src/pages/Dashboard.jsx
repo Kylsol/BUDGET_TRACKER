@@ -1,22 +1,82 @@
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Helmet } from "react-helmet-async";
 import { useBudget } from "../contexts/BudgetContext.jsx";
-import { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer } from "recharts";
+import { fetchLatestRates } from "../services/frankfurter.js";
+import { PieChart, Pie, Cell, Tooltip, Legend } from "recharts";
 
 export default function Dashboard() {
   const { transactions, settings } = useBudget();
+  const baseCurrency = settings.baseCurrency;
 
-  const income = transactions
-    .filter((t) => t.type === "income")
-    .reduce((sum, t) => sum + Number(t.amount || 0), 0);
+  const [rates, setRates] = useState({});
+  const [ratesLoading, setRatesLoading] = useState(false);
+  const [ratesError, setRatesError] = useState("");
 
-  const expenses = transactions
-    .filter((t) => t.type === "expense")
-    .reduce((sum, t) => sum + Number(t.amount || 0), 0);
+  useEffect(() => {
+    let alive = true;
+
+    async function loadRates() {
+      try {
+        setRatesLoading(true);
+        setRatesError("");
+
+        const data = await fetchLatestRates(baseCurrency);
+
+        if (!alive) return;
+        setRates(data?.rates || {});
+      } catch (err) {
+        if (!alive) return;
+        setRates({});
+        setRatesError(err?.message || "Failed to load exchange rates.");
+      } finally {
+        if (!alive) return;
+        setRatesLoading(false);
+      }
+    }
+
+    loadRates();
+
+    return () => {
+      alive = false;
+    };
+  }, [baseCurrency]);
+
+  function convertToBase(amount, currency) {
+    const numericAmount = Number(amount || 0);
+
+    if (!currency || currency === baseCurrency) {
+      return numericAmount;
+    }
+
+    const rate = rates[currency];
+
+    if (!rate || rate === 0) {
+      return 0;
+    }
+
+    return numericAmount / rate;
+  }
+
+  const convertedTotals = useMemo(() => {
+    let income = 0;
+    let expenses = 0;
+
+    for (const t of transactions) {
+      const convertedAmount = convertToBase(t.amount, t.currency);
+
+      if (t.type === "income") {
+        income += convertedAmount;
+      } else if (t.type === "expense") {
+        expenses += convertedAmount;
+      }
+    }
+
+    return { income, expenses };
+  }, [transactions, rates, baseCurrency]);
 
   const chartData = [
-    { name: "Income", value: income },
-    { name: "Expenses", value: expenses },
+    { name: "Income", value: Number(convertedTotals.income.toFixed(2)) },
+    { name: "Expenses", value: Number(convertedTotals.expenses.toFixed(2)) },
   ];
 
   const totalsByCurrency = useMemo(() => {
@@ -25,17 +85,17 @@ export default function Dashboard() {
     for (const t of transactions) {
       const sign = t.type === "expense" ? -1 : 1;
       const value = sign * Number(t.amount || 0);
-      const currency = t.currency || settings.baseCurrency;
+      const currency = t.currency || baseCurrency;
 
       map.set(currency, (map.get(currency) ?? 0) + value);
     }
 
     return Array.from(map.entries()).sort(([a], [b]) => {
-      if (a === settings.baseCurrency) return -1;
-      if (b === settings.baseCurrency) return 1;
+      if (a === baseCurrency) return -1;
+      if (b === baseCurrency) return 1;
       return a.localeCompare(b);
     });
-  }, [transactions, settings.baseCurrency]);
+  }, [transactions, baseCurrency]);
 
   return (
     <section>
@@ -44,7 +104,7 @@ export default function Dashboard() {
       </Helmet>
 
       <h2>Dashboard</h2>
-      <p className="muted">Base currency: {settings.baseCurrency}</p>
+      <p className="muted">Base currency: {baseCurrency}</p>
 
       <div className="card">
         <strong>Net totals (by currency)</strong>
@@ -68,32 +128,59 @@ export default function Dashboard() {
       </div>
 
       <div className="card">
-        <strong>Income vs Expenses</strong>
+        <strong>Income vs Expenses (Converted to {baseCurrency})</strong>
 
-        {income === 0 && expenses === 0 ? (
+        {ratesLoading && (
           <p className="muted" style={{ marginTop: 12 }}>
-            Add transactions to see the chart.
+            Loading exchange rates…
           </p>
-        ) : (
-          <div style={{ width: "100%", height: 280, marginTop: 12 }}>
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie
-                  data={chartData}
-                  dataKey="value"
-                  nameKey="name"
-                  outerRadius={90}
-                  label
-                >
-                  <Cell fill="#16a34a" />
-                  <Cell fill="#dc2626" />
-                </Pie>
-                <Tooltip />
-                <Legend />
-              </PieChart>
-            </ResponsiveContainer>
-          </div>
         )}
+
+        {ratesError && (
+          <p className="error" style={{ marginTop: 12 }}>
+            {ratesError}
+          </p>
+        )}
+
+        {!ratesLoading &&
+          !ratesError &&
+          convertedTotals.income === 0 &&
+          convertedTotals.expenses === 0 && (
+            <p className="muted" style={{ marginTop: 12 }}>
+              Add transactions to see the chart.
+            </p>
+          )}
+
+        {!ratesLoading &&
+          !ratesError &&
+          (convertedTotals.income > 0 || convertedTotals.expenses > 0) && (
+            <>
+              <p className="muted" style={{ marginTop: 12 }}>
+                All transaction amounts are converted into {baseCurrency} before visualization.
+              </p>
+
+              <div style={{ marginTop: 12, display: "flex", justifyContent: "center" }}>
+                <PieChart width={320} height={260}>
+                  <Pie
+                    data={chartData}
+                    dataKey="value"
+                    nameKey="name"
+                    cx="50%"
+                    cy="50%"
+                    outerRadius={90}
+                    label
+                  >
+                    <Cell fill="#16a34a" />
+                    <Cell fill="#dc2626" />
+                  </Pie>
+                  <Tooltip
+                    formatter={(value) => [`${Number(value).toFixed(2)} ${baseCurrency}`, ""]}
+                  />
+                  <Legend />
+                </PieChart>
+              </div>
+            </>
+          )}
       </div>
     </section>
   );
