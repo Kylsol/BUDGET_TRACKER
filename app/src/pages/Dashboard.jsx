@@ -1,9 +1,23 @@
 import { useMemo } from "react";
 import { Helmet } from "react-helmet-async";
 import { useBudget } from "../contexts/BudgetContext.jsx";
+import { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer } from "recharts";
 
 export default function Dashboard() {
   const { transactions, settings } = useBudget();
+
+  const income = transactions
+    .filter((t) => t.type === "income")
+    .reduce((sum, t) => sum + Number(t.amount || 0), 0);
+
+  const expenses = transactions
+    .filter((t) => t.type === "expense")
+    .reduce((sum, t) => sum + Number(t.amount || 0), 0);
+
+  const chartData = [
+    { name: "Income", value: income },
+    { name: "Expenses", value: expenses },
+  ];
 
   const totalsByCurrency = useMemo(() => {
     const map = new Map();
@@ -51,6 +65,35 @@ export default function Dashboard() {
         )}
 
         <p className="muted">Transactions: {transactions.length}</p>
+      </div>
+
+      <div className="card">
+        <strong>Income vs Expenses</strong>
+
+        {income === 0 && expenses === 0 ? (
+          <p className="muted" style={{ marginTop: 12 }}>
+            Add transactions to see the chart.
+          </p>
+        ) : (
+          <div style={{ width: "100%", height: 280, marginTop: 12 }}>
+            <ResponsiveContainer>
+              <PieChart>
+                <Pie
+                  data={chartData}
+                  dataKey="value"
+                  nameKey="name"
+                  outerRadius={90}
+                  label
+                >
+                  <Cell fill="#16a34a" />
+                  <Cell fill="#dc2626" />
+                </Pie>
+                <Tooltip />
+                <Legend />
+              </PieChart>
+            </ResponsiveContainer>
+          </div>
+        )}
       </div>
     </section>
   );
