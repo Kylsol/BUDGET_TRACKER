@@ -1,5 +1,5 @@
 const API_BASE =
-  import.meta.env.VITE_EXCHANGE_API_BASE || "https://api.frankfurter.dev";
+  import.meta.env.VITE_EXCHANGE_API_BASE || "https://api.frankfurter.dev/v1";
 
 /**
  * Fetch latest exchange rates using the Frankfurter API
