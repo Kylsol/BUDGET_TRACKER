@@ -76,7 +76,7 @@ export default function Dashboard() {
           </p>
         ) : (
           <div style={{ width: "100%", height: 280, marginTop: 12 }}>
-            <ResponsiveContainer>
+            <ResponsiveContainer width="100%" height="100%">
               <PieChart>
                 <Pie
                   data={chartData}
